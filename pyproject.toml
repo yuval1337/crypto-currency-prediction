@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "crypto-currency-prediction"
+version = "0.1.0"
+description = ""
+authors = ["yuval-ro <yuvalro@protonmail.com>"]
+readme = "README.md"
+packages = [{include = "crypto_currency_prediction"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+autopep8 = "^2.0.2"
+requests = "^2.31.0"
+pandas = "^2.0.2"
+torch = "^2.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
