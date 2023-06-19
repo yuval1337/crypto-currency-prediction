@@ -1,3 +1,5 @@
+from .dataset import CryptoCompareDataset
+
 from .typing import *
 
 
@@ -8,7 +10,7 @@ class Trainer:
 
     This will use a PyTorch DataLoader that will be created based off the given DataFrame:
 
-      ```txt
+      ```
                   time      high       low      open  volumefrom      volumeto     close conversionType conversionSymbol
       0     1557360000   6194.91   5988.65   5998.71    51005.27  3.103366e+08   6171.96         direct
       1     1557446400   6444.57   6133.21   6171.96    68160.13  4.304034e+08   6358.29         direct

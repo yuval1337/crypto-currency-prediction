@@ -4,9 +4,12 @@ import pandas as pd
 
 
 URL_ENDPOINT = 'https://min-api.cryptocompare.com/data/v2/histoday'
+SYMBOLS = ['btc', 'eth', 'xrp', 'usdt', 'usdc',
+           'busd', 'bnb', 'tusd', 'doge', 'shib']
 
 
 class CryptoCompareConnector:
+
   @staticmethod
   def data_histoday(symbol: str) -> pd.DataFrame:
     '''Retrieves data from the [Daily Pair OHLCV service](https://min-api.cryptocompare.com/documentation?key=Historical&cat=dataHistoday) offered by CryptoCompare:
@@ -27,7 +30,13 @@ class CryptoCompareConnector:
     Returns:
       pd.DataFrame: ...
     '''
+    if symbol not in SYMBOLS:
+      raise ValueError(f'expected one of {SYMBOLS}, got {symbol} instead')
     res = get(URL_ENDPOINT, {'fsym': symbol, 'tsym': 'usd', 'limit': 1500})
     response_text_json = loads(res.text)
+    df = pd.DataFrame(response_text_json['Data']['Data'])
     # df['time'] = pd.to_datetime(df['time'], unit='s') # converting the time column to a human-readable format
-    return pd.DataFrame(response_text_json['Data']['Data'])
+    return df.drop(['conversionType', 'conversionSymbol'], axis=1)
+
+  @staticmethod
+  def
