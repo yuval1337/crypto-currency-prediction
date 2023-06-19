@@ -14,15 +14,17 @@ class HyperParams:
   '''
 
   loss: LossFunction
-  optim: Optimizer
+  optimizer: Optimizer
   lr: float
   epochs: int
+  batch_size: int
 
   def __init__(self,
                epochs: int,
-               loss: Literal['nll', 'mse', 'ce'] = 'ce',
-               optim: Literal['adagrad', 'adam', 'sgd'] = 'adam',
-               lr: float = 0.001) -> None:
+               batch_size: int,
+               loss: Literal['nll', 'mse', 'ce'],
+               optimizer: Literal['adagrad', 'adam', 'sgd'],
+               lr: float) -> None:
     '''C'tor.
 
     Args:
@@ -35,26 +37,29 @@ class HyperParams:
         ValueError: If 'lr' is not constrained by: 0 < lr < 1
         ValueError: If 'epochs' is not greater than 0.
     '''
-    if loss == 'nll':
-      self.loss = torch.nn.NLLLoss
-    elif loss == 'mse':
-      self.loss = torch.nn.MSELoss
-    else:  # loss == 'ce'
-      self.loss = torch.nn.CrossEntropyLoss
+    if epochs <= 0:
+      raise ValueError
+    self.epochs = epochs
 
-    if optim == 'adagrad':
-      self.optim = torch.optim.Adagrad
-    elif optim == 'adam':
-      self.optim = torch.optim.Adam
+    if batch_size <= 0:
+      raise ValueError
+    self.batch_size = batch_size
+
+    if loss == 'nll':
+      self.loss = torch.nn.NLLLoss()
+    elif loss == 'mse':
+      self.loss = torch.nn.MSELoss(size_average=False, reduce=True)
+    else:  # loss == 'ce'
+      self.loss = torch.nn.CrossEntropyLoss()
+
+    if optimizer == 'adagrad':
+      self.optimizer = torch.optim.Adagrad
+    elif optimizer == 'adam':
+      self.optimizer = torch.optim.Adam
     else:  # optim == 'sgd'
-      self.optim = torch.optim.SGD
+      self.optimizer = torch.optim.SGD
 
     if lr >= 1 or lr <= 0:
       raise ValueError
     else:
       self.lr = lr
-
-    if epochs <= 0:
-      raise ValueError
-    else:
-      self.epochs = epochs
