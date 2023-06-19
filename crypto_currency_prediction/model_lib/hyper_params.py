@@ -4,15 +4,6 @@ from .typing import *
 
 
 class HyperParams:
-  '''Bundles hyper-parameters for model training.
-
-  Attributes:
-    loss (LossFunction): Some loss function.
-    optim (Optimizer): Some optimizer.
-    lr (float): The learning rate.
-    epochs (int): Total training epochs to perform.
-  '''
-
   loss: LossFunction
   optimizer: Optimizer
   lr: float
@@ -25,18 +16,6 @@ class HyperParams:
                loss: Literal['nll', 'mse', 'ce'],
                optimizer: Literal['adagrad', 'adam', 'sgd'],
                lr: float) -> None:
-    '''C'tor.
-
-    Args:
-        loss (Literal['nll', 'mse', 'ce']): Choose either Negative Log Likelihood, Mean Squares Error, or Cross Entropy.
-        optim (Literal['adagrad', 'adam', 'sgd']): Choose either AdaGrad, Adam, or Stochastic Gradient Descent.
-        lr (float): Learning rate, constrained by: `0 < lr < 1`
-        epochs (int): Total epochs; more than 10 is not recommended.
-
-    Raises:
-        ValueError: If 'lr' is not constrained by: 0 < lr < 1
-        ValueError: If 'epochs' is not greater than 0.
-    '''
     if epochs <= 0:
       raise ValueError
     self.epochs = epochs

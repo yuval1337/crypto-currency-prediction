@@ -5,7 +5,7 @@
 <img src="./.github/assets/logo.png"/> -->
 
 ###### Powered by
-![python,pytorch](https://skillicons.dev/icons?i=py,pytorch)
+![python,pytorch](https://skillicons.dev/icons?i=py,pytorch,scikitlearn)
 
 
 # Table of Contents
