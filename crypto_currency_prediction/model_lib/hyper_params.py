@@ -1,44 +1,29 @@
-import torch
-
 from .typing import *
+from torch.nn.functional import mse_loss
 
 
 class HyperParams:
-  loss: LossFunction
-  optimizer: Optimizer
-  lr: float
-  epochs: int
-  batch_size: int
-
   def __init__(self,
                epochs: int,
                batch_size: int,
-               loss: Literal['nll', 'mse', 'ce'],
-               optimizer: Literal['adagrad', 'adam', 'sgd'],
-               lr: float) -> None:
-    if epochs <= 0:
-      raise ValueError
+               lr: float,
+               loss_func: Any,
+               optimizer: Optimizer,
+               reg_factor: float = 0.0) -> None:
     self.epochs = epochs
-
-    if batch_size <= 0:
-      raise ValueError
     self.batch_size = batch_size
+    self.loss_func = loss_func
+    self.lr = lr
+    self.optimizer = optimizer
+    self.reg_factor = reg_factor
 
-    if loss == 'nll':
-      self.loss = torch.nn.NLLLoss()
-    elif loss == 'mse':
-      self.loss = torch.nn.MSELoss(size_average=False, reduce=True)
-    else:  # loss == 'ce'
-      self.loss = torch.nn.CrossEntropyLoss()
+  def get_optimizer(self, model_params) -> Optimizer:
+    return self.optimizer(
+        model_params,
+        lr=self.lr,
+        weight_decay=self.reg_factor
+    )
 
-    if optimizer == 'adagrad':
-      self.optimizer = torch.optim.Adagrad
-    elif optimizer == 'adam':
-      self.optimizer = torch.optim.Adam
-    else:  # optim == 'sgd'
-      self.optimizer = torch.optim.SGD
-
-    if lr >= 1 or lr <= 0:
-      raise ValueError
-    else:
-      self.lr = lr
+  # TODO currently supports MSE only
+  def calc_loss(self, pred, target) -> Tensor:
+    return self.loss_func(pred.view(-1), target, reduction='mean')

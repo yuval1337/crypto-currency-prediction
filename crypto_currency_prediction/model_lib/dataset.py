@@ -5,19 +5,22 @@ from .typing import *
 
 
 class CryptoCompareDataset:
-  X: np.ndarray  # features
+  symbol: str  # type of cryptocurrency
+  # the currency in which the crypto value is measured, e.g. USD, EUR, ...
+  to: str
+  x: np.ndarray  # features
   y: np.ndarray  # target
-  symbol: str
 
-  def __init__(self, symbol: str, X: np.ndarray, y: np.ndarray):
+  def __init__(self, symbol: str, to: str, x: np.ndarray, y: np.ndarray):
     self.symbol = symbol
-    self.X = X
+    self.to = to
+    self.x = x
     self.y = y
 
   @property
-  def get_X(self) -> Tensor:
-    normalized = (self.X - np.mean(self.X, axis=0)
-                  ) / np.std(self.X, axis=0)
+  def get_x(self) -> Tensor:
+    normalized = (self.x - np.mean(self.x, axis=0)
+                  ) / np.std(self.x, axis=0)
     as_tensor = torch.from_numpy(normalized)
     return as_tensor.view(as_tensor.shape[0], 1, -1).float()
 
@@ -29,5 +32,9 @@ class CryptoCompareDataset:
     return as_tensor
 
   def __repr__(self) -> str:
-    return 'CryptoDataset(' + f'\nsymbol={self.symbol}, as={self.AS}' + f'\ntime={self._time}' + \
-        f'\nfeatures={self._features}' + f'\ntarget={self._target}' + '\n)'
+    return 'CryptoCompareDataset(\n'\
+        + f'symbol={self.symbol}\n'\
+        + f'to={self.to}\n'\
+        + f'features={self.x}\n'\
+        + f'target={self.y}\n'\
+        + ')'

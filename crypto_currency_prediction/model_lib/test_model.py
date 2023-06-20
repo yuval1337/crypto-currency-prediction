@@ -8,16 +8,18 @@ from .model import CryptoPredictorModel as Model
 from .typing import *
 
 
-def test(model_arg: Model, hp: HyperParams, ds: Dataset):
-  tds = TensorDataset(ds.get_X, ds.get_y)
-  dl = DataLoader(tds, hp.batch_size, shuffle=True)
+def test(model_arg: Model, hp: HyperParams, ds: Dataset) -> None:
+  tds = TensorDataset(ds.get_x, ds.get_y)
+  dl = DataLoader(tds, hp.batch_size, shuffle=False)
   model = model_arg
+
+  print('testing...')
   model.eval()
+  with torch.no_grad():
+    test_loss = 0.0
+    for inputs, labels in dl:
+      pred = model.forward(inputs)
+      loss = hp.calc_loss(pred, labels)
+      test_loss += (loss.item() / len(inputs))
 
-  # with torch.no_grad():
-  #   pred = model.forward(ds.features_as_tensor).squeeze().numpy()
-
-  # pred_denorm = pred * np.std(ds.target_as_tensor) + \
-  #     np.mean(ds.target_as_tensor)
-
-  # print(pred_denorm)
+  print(f'        test_loss={test_loss}')

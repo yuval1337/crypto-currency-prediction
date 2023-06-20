@@ -9,19 +9,22 @@ from .typing import *
 
 
 def train(model_arg: Model, hp: HyperParams, ds: Dataset) -> Model:
-  tds = TensorDataset(ds.get_X, ds.get_y)
+  tds = TensorDataset(ds.get_x, ds.get_y)
   dl = DataLoader(tds, hp.batch_size, shuffle=True)
   model = model_arg
+  optimizer = hp.get_optimizer(model.parameters())
+
+  print('training...')
   model.train()
-  optimizer = hp.optimizer(model.parameters(), lr=hp.lr)
   for epoch in range(hp.epochs):
-    epoch_loss = 0.0
+    train_loss = 0.0
     for inputs, labels in dl:
       optimizer.zero_grad()
       outputs = model.forward(inputs)
-      loss = hp.loss(outputs, labels)
+      loss = hp.calc_loss(outputs, labels)
       loss.backward()
       optimizer.step()
-      epoch_loss += (loss / hp.batch_size)
-    print(f'epoch={epoch + 1}, loss={epoch_loss}')
+      train_loss += (loss.item() / len(inputs))
+    print(f'epoch={epoch + 1}, train_loss={train_loss}')
+
   return model
