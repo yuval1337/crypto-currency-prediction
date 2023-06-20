@@ -26,4 +26,4 @@ class HyperParams:
 
   # TODO currently supports MSE only
   def calc_loss(self, pred, target) -> Tensor:
-    return self.loss_func(pred.view(-1), target, reduction='mean')
+    return self.loss_func(pred.view(-1), target, reduce=True, reduction='mean')
