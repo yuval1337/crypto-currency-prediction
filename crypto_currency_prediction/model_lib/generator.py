@@ -46,14 +46,13 @@ class CryptoCompareDatasetGenerator:
     x, y = self._df_to_x_y(df)
     self.ds = Dataset(symbol, to, x, y)
 
-  def split(self, train_size: float) -> Tuple[Dataset, Dataset]:
+  def split(self, ratio: float) -> Tuple[Dataset, Dataset]:
     '''Split current (state) dataset into train test datasets, and return them.'''
-    x_train, x_test, y_train, y_test = train_test_split(
-        self.ds.x,
-        self.ds.y,
-        train_size=train_size,
-        test_size=(1.0 - train_size)
-    )
+    idx = int(len(self.ds.y) * ratio)
+
+    x_train, x_test = np.split(self.ds.x, [idx])
+    y_train, y_test = np.split(self.ds.y, [idx])
+
     return (
         Dataset(self.ds.symbol, self.ds.to, x_train, y_train),
         Dataset(self.ds.symbol, self.ds.to, x_test, y_test)

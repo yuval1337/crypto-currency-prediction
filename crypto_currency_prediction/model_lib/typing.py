@@ -1,4 +1,4 @@
-from torch import Tensor
+from torch import Tensor, Size
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torch.nn import Module

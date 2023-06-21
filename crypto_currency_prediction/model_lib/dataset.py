@@ -7,11 +7,10 @@ from .typing import *
 
 
 class CryptoCompareDataset:
-  symbol: str  # type of cryptocurrency
-  # the currency in which the crypto value is measured, e.g. USD, EUR, ...
-  to: str
+  symbol: str  # type of cryptocurrency: BTC, ETH, etc.
+  to: str  # valuation currency: USD, EUR, etc.
   x: np.ndarray  # features
-  y: np.ndarray  # target
+  y: np.ndarray  # targets
   scaler: MinMaxScaler
 
   def __init__(self, symbol: str, to: str, x: np.ndarray, y: np.ndarray):
@@ -22,14 +21,34 @@ class CryptoCompareDataset:
     self.scaler = MinMaxScaler()
 
   @property
-  def get_x(self) -> Tensor:
-    normalized = self.normalize(self.x)
-    return self.np2tensor(normalized).float()
+  def x_size(self) -> int:
+    return 1 if len(self.x.shape) == 1 else self.x.shape[1]
 
   @property
-  def get_y(self) -> Tensor:
-    normalized = self.normalize(self.y)
-    return self.np2tensor(normalized).float()
+  def y_size(self) -> int:
+    return 1 if len(self.y.shape) == 1 else self.y.shape[1]
+
+  @property
+  def x_scaled(self) -> Tensor:
+    x_scaled = self.scaler.fit_transform(self.x, self.y)
+    x_scaled_as_tensor = self.np2tensor(x_scaled).float()
+    return x_scaled_as_tensor
+
+  @property
+  def y_scaled(self) -> Tensor:
+    y_scaled = self.scaler.fit_transform(self.y.reshape(-1, 1))
+    y_scaled_as_tensor = self.np2tensor(y_scaled).float()
+    return y_scaled_as_tensor
+
+  def scale_x(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    return self.scaler.fit_transform(x, y)
+
+  def scale_y(self, y: np.ndarray) -> np.ndarray:
+    return self.scaler.fit_transform(y.reshape(-1, 1))
+
+  def descale_tensor(self, tensor: Tensor) -> np.ndarray:
+    arr = tensor.numpy()
+    return self.scaler.inverse_transform(arr)
 
   @staticmethod
   def np2tensor(x: np.ndarray) -> Tensor:
@@ -38,18 +57,6 @@ class CryptoCompareDataset:
       return tensor.view(tensor.shape[0], 1, -1)
     else:
       return torch.from_numpy(x)
-
-  @staticmethod
-  def tensor2np(x: Tensor) -> np.ndarray:
-    return x.numpy()
-
-  def normalize(self, x: np.ndarray) -> np.ndarray:
-    # return (x - np.mean(x, axis=0)) / np.std(x, axis=0)
-    return self.scaler.fit_transform(x.reshape(-1, 1))
-
-  def denormalize(self, x_scaled: np.ndarray) -> np.ndarray:
-    # return (x * np.std(x, axis=0)) + np.mean(x, axis=0)
-    return self.scaler.inverse_transform(x_scaled.reshape(-1, 1))
 
   def __repr__(self) -> str:
     return 'CryptoCompareDataset(\n'\
