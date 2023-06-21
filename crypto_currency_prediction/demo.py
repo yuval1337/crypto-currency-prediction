@@ -1,6 +1,5 @@
 from utils import *
 from model_lib import *
-import numpy as np
 
 
 def demo():
@@ -24,13 +23,9 @@ def demo():
       lr=0.0001,
       reg_factor=0.01
   )
-  trainer_obj = Trainer(model_obj, hp_obj, train_set)
-  trainer_obj.train()
-
-# def demo_graph():
-#   gen = Generator('btc', 'usd', from_file=True)
-#   plt = Plotter(gen)
-#   plt.show_diff(pred)
+  trainer_obj = Trainer(model_obj, hp_obj, train_set, test_set)
+  trainer_obj.train(verbose=True)
+  trainer_obj.test()
 
 
 if __name__ == '__main__':

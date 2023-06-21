@@ -6,13 +6,15 @@ from .typing import *
 
 
 class CryptoPredictorModel(nn.Module):
+  '''Simple, hybrid deep-learning model for predicting time-series.'''
+
   def __init__(self, in_features, out_features, hidden_size, num_layers) -> None:
     super(CryptoPredictorModel, self).__init__()
-    print(f'in_features={in_features}')
     self.in_features = in_features
     self.out_features = out_features
     self.hidden_size = hidden_size
     self.num_layers = num_layers
+    # https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
     self.lstm = nn.LSTM(in_features, hidden_size, num_layers, batch_first=True)
     # in size must be hidden size!
     self.linear = nn.Linear(hidden_size, out_features)

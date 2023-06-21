@@ -1,6 +1,6 @@
 import torch
-import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
+import numpy as np
 
 from .dataset import CryptoCompareDataset as Dataset
 from .model import CryptoPredictorModel as Model
@@ -27,42 +27,87 @@ class EarlyStopper:
 
 
 class Trainer:
-  models: list[Model]
+  memory: list[Model]
   hp: HyperParams
-  ds: Dataset
+  train_set: Dataset
+  test_set: Dataset
+  es: EarlyStopper
 
-  def __init__(self, model: Model, hp: HyperParams, ds: Dataset):
-    self.models = [model]
+  def __init__(self, model: Model,
+               hp: HyperParams,
+               train_set: Dataset,
+               test_set: Dataset):
+    self.memory = [model]
     self.hp = hp
-    self.ds = ds
+    self.train_set = train_set
+    self.test_set = test_set
+    self.es = EarlyStopper(patience=5, delta=0.001)
 
-  def train(self) -> None:
+  def train(self, verbose: bool = False) -> None:
     '''Perform a single training session of this object's latest model, save the trained model'''
-    tds = TensorDataset(self.ds.x_scaled, self.ds.y_scaled)
-    dl = DataLoader(tds, self.hp.batch_size, shuffle=True)
-    model = self.models[-1]  # get the latest model
-    optimizer = self.hp.get_optimizer(model.parameters())
-    es = EarlyStopper(patience=5, delta=0.001)
+    if verbose:
+      print('training...')
 
-    print('training...')
+    model = self.model
+    optimizer = self.hp.get_optimizer(model.parameters())
+
     model.train()
     for epoch in range(self.hp.epochs):
       epoch_loss = 0.0
-      for inputs, labels in dl:
+      for inputs, labels in self.train_dl:
         optimizer.zero_grad()
         outputs = model.forward(inputs)
         loss = self.hp.calc_loss(outputs, labels)
         loss.backward()
         optimizer.step()
         epoch_loss += (loss.item() / len(inputs))
-
-      print(f'epoch={epoch + 1}, loss={epoch_loss}')
-      # Check for early stopping
-      if es.check_stop(epoch_loss):
+      if verbose:
+        print(f'epoch={epoch + 1}, loss={epoch_loss}')
+      if self.es.check_stop(epoch_loss):  # early stopping mechanism
         break
 
-    self.models.append(model)
+    self.memory.append(model)
+
+  def test(self, verbose: bool = True) -> None:
+    if verbose:
+      print('testing...')
+
+    model = self.model
+    predictions = []
+
+    model.eval()
+    with torch.no_grad():
+      test_loss = 0.0
+      for inputs, labels in self.test_dl:
+        batch_prediction = model.forward(inputs)
+        predictions.append(self.test_set.descale_tensor(
+            batch_prediction).flatten())
+        loss = self.hp.calc_loss(batch_prediction, labels)
+        test_loss += (loss.item() / len(inputs))
+
+    predictions = np.concatenate(predictions)
+
+    if verbose:
+      print(f'test_loss={test_loss}')
+      print(predictions)
+
+    # df = pd.DataFrame({'close': predictions})
+    return None
 
   @property
-  def latest_model(self) -> Model:
-    return self.models[-1]
+  def train_dl(self) -> DataLoader:
+    tds = TensorDataset(self.train_set.x_scaled,
+                        self.train_set.y_scaled.squeeze(2))
+    dl = DataLoader(tds, self.hp.batch_size, shuffle=True)
+    return dl
+
+  @property
+  def test_dl(self) -> DataLoader:
+    tds = TensorDataset(self.test_set.x_scaled,
+                        self.test_set.y_scaled.squeeze(2))
+    dl = DataLoader(tds, self.hp.batch_size, shuffle=False)
+    return dl
+
+  @property
+  def model(self) -> Model:
+    return self.memory[-1]
