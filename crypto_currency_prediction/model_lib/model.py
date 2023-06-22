@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
-from glob import glob
 
-from utils import timestamp
+from utils import timestamp, globber
 from .typing import *
 
 
@@ -44,7 +43,6 @@ class CryptoPredictorModel(nn.Module):
 
   # TODO finish this method
   def load(self) -> None:
-    '''Loads this model with values from a local `.pth` file; will find the latest one.'''
+    '''Loads this model with values from the most recent local `.pth` file.'''
     # file = globber(f'cpm_*.pth')
-    # state_dict = torch.load(file, map_location=torch.device('cpu'))
     pass

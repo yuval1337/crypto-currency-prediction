@@ -32,11 +32,3 @@ class CryptoDatasetPlotter:
     plt.ylabel(f'value ({self.gen.ds.to})')
     plt.xlabel(f'close (per-day)')
     plt.show()
-
-
-class TrainingPlotter:
-  train_loss: np.ndarray
-  hp: HyperParams
-
-  def __init__(self):
-    pass

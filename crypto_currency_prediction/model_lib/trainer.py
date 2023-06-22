@@ -1,30 +1,39 @@
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from .dataset import CryptoCompareDataset as Dataset
 from .model import CryptoPredictorModel as Model
 from .typing import *
 
 
+LINE = '{0:<8}{1:<20}{2:<20}'
+
+
 class TrainingSession:
   '''Bundle a single training session's results.'''
   model: Model
   train_set: Dataset
+  test_set: Dataset
   hp: HyperParams
-  losses: list[float]
-  early_stop: bool  # whether an early-stop was triggered
+  train_loss_list: list[float]
+  test_loss_list: list[float]
 
   def __init__(self,
                model: Model,
                train_set: Dataset,
+               test_set: Dataset,
                hp: HyperParams,
-               losses: list[float]) -> None:
+               train_loss_list: list[float],
+               test_loss_list: list[float]) -> None:
     self.model = model
     self.train_set = train_set
+    self.test_set = test_set
     self.hp = hp
-    self.losses = losses
-    self.early_stop = True if len(losses) < hp.epochs else False
+    self.train_loss_list = train_loss_list
+    self.test_loss_list = test_loss_list
 
 
 class Trainer:
@@ -38,72 +47,70 @@ class Trainer:
 
   def train(self,
             train_set: Dataset,
-            hp: HyperParams = None,
-            verbose: bool = True) -> TrainingSession | None:
+            test_set: Dataset,
+            hp: HyperParams,
+            verbose: bool = False) -> TrainingSession | None:
     '''Perform a single training session of this object's most recent model, and save the resulting trained model'''
     if verbose:
       print('training...')
-
     model = self.model  # get the most recent model
     optimizer = hp.get_optimizer(model.parameters())
-    dl = train_set.to_dl(hp.batch_size)
+    train_dl = train_set.to_dl(hp.batch_size)
+    test_dl = test_set.to_dl(hp.batch_size)
 
-    losses = []
+    train_loss_list = []
+    test_loss_list = []
 
-    model.train()
+    if verbose:
+      print(LINE.format('epoch', 'train_loss', 'test_loss'))
+
     for epoch in range(hp.epochs):
-      epoch_loss = 0.0
-      for inputs, labels in dl:
+      train_loss = 0.0
+      test_loss = 0.0
+      model.train()
+      for inputs, labels in train_dl:
         optimizer.zero_grad()
         outputs = model.forward(inputs)
         loss = hp.mse_loss(outputs, labels)
         loss.backward()
         optimizer.step()
-        epoch_loss += (loss.item() / len(inputs))
-      losses.append(epoch_loss)
+        train_loss += (loss.item() / len(inputs))
+      model.eval()
+      with torch.no_grad():
+        for inputs, labels in test_dl:
+          outputs = model.forward(inputs)
+          loss = hp.mse_loss(outputs, labels)
+          test_loss += (loss.item() / len(inputs))
       if verbose:
-        print(f'epoch={epoch + 1}, loss={epoch_loss}')
-
+        print(LINE.format((epoch + 1), train_loss, test_loss))
       if hp.has_stopper:
-        if hp.stopper(loss=epoch_loss):  # early stopping triggered
+        if hp.stopper(loss=train_loss):  # early stopping triggered
           if verbose:
             print('early-stop triggered!')
           break
+      train_loss_list.append(train_loss)
+      test_loss_list.append(test_loss)
 
     session = TrainingSession(
         model,
         train_set,
+        test_set,
         hp,
-        losses
+        train_loss_list,
+        test_loss_list
     )
-
+    if verbose:
+      self.plot(session)
     self.memory.append(session)
 
-  def test(self, verbose: bool = True) -> None:
-    if verbose:
-      print('testing...')
-
-    model = self.model
-    predictions = []
-
-    model.eval()
-    with torch.no_grad():
-      test_loss = 0.0
-      for inputs, labels in self.test_dl:
-        batch_prediction = model.forward(inputs)
-        predictions.append(self.test_set.descale_tensor(
-            batch_prediction).flatten())
-        loss = self.hp.mse_loss(batch_prediction, labels)
-        test_loss += (loss.item() / len(inputs))
-
-    predictions = np.concatenate(predictions)
-
-    if verbose:
-      print(f'test_loss={test_loss}')
-      print(predictions)
-
-    # df = pd.DataFrame({'close': predictions})
-    return None
+  @staticmethod
+  def plot(ts: TrainingSession) -> None:
+    df = pd.DataFrame({'train': ts.train_loss_list,
+                      'test': ts.test_loss_list})
+    df.plot(y=['train', 'test'])
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch #')
+    plt.show()
 
   @property
   def model(self) -> Model:

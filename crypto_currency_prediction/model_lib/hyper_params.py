@@ -5,6 +5,7 @@ from .early_stopper import EarlyStopper
 
 class HyperParams:
   '''Bundle model training hyper-parameters.'''
+  # currently supports only MSE as a loss function
   epochs: int
   batch_size: int
   _learn_rate: float
@@ -18,14 +19,14 @@ class HyperParams:
                optimizer: Optimizer,
                learn_rate: float = None,
                reg_factor: float = None,
-               stopper: EarlyStopper = None) -> None:
+               stopper_tolerance: Literal['low', 'med', 'high'] = None) -> None:
     self.epochs = epochs
     self.batch_size = batch_size
     self.optimizer = optimizer
-
     self._learn_rate = learn_rate
     self._reg_factor = reg_factor
-    self.stopper = stopper
+    self.stopper = EarlyStopper(
+        stopper_tolerance) if stopper_tolerance is not None else None
 
   def get_optimizer(self, model_params) -> Optimizer:
     if self._learn_rate is None:
