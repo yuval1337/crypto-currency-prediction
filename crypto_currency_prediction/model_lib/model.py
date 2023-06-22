@@ -1,28 +1,50 @@
 import torch
 import torch.nn as nn
-from .typing import *
+from glob import glob
 
-# https://machinelearningmastery.com/lstm-for-time-series-prediction-in-pytorch/
+from utils import timestamp
+from .typing import *
 
 
 class CryptoPredictorModel(nn.Module):
-  '''Simple, hybrid deep-learning model for predicting time-series.'''
+  '''Simple, hybrid deep-learning model for predicting time-series.  
+  Source: https://machinelearningmastery.com/lstm-for-time-series-prediction-in-pytorch/
+  '''
+  in_features: int
+  out_features: int
+  HIDDEN_SIZE: int = 128
+  NUM_LAYERS: int = 2
 
-  def __init__(self, in_features, out_features, hidden_size, num_layers) -> None:
+  def __init__(self, ds: Dataset) -> None:
     super(CryptoPredictorModel, self).__init__()
-    self.in_features = in_features
-    self.out_features = out_features
-    self.hidden_size = hidden_size
-    self.num_layers = num_layers
+    self.in_features = ds.x_size
+    self.out_features = ds.y_size
     # https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
-    self.lstm = nn.LSTM(in_features, hidden_size, num_layers, batch_first=True)
-    # in size must be hidden size!
-    self.linear = nn.Linear(hidden_size, out_features)
+    self.lstm = nn.LSTM(self.in_features,
+                        self.HIDDEN_SIZE,
+                        self.NUM_LAYERS,
+                        batch_first=True)
+    self.linear = nn.Linear(in_features=self.HIDDEN_SIZE,
+                            out_features=self.out_features)
 
   def forward(self, x: Tensor) -> Tensor:
-    h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-    c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+    h0 = torch.zeros(self.NUM_LAYERS, x.size(0), self.HIDDEN_SIZE).to(x.device)
+    c0 = torch.zeros(self.NUM_LAYERS, x.size(0), self.HIDDEN_SIZE).to(x.device)
     out, _ = self.lstm(x, (h0, c0))
     out = out[:, -1, :]  # Get the last output from LSTM sequence
     out = self.linear(out)
     return out
+
+  def save(self) -> None:
+    '''Saves this model to a local `.pth` file.'''
+    torch.save(
+        obj=self.state_dict(),
+        f=f'cpm_{timestamp()}.pth'
+    )
+
+  # TODO finish this method
+  def load(self) -> None:
+    '''Loads this model with values from a local `.pth` file; will find the latest one.'''
+    # file = globber(f'cpm_*.pth')
+    # state_dict = torch.load(file, map_location=torch.device('cpu'))
+    pass

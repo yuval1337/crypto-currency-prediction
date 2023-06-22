@@ -1,29 +1,47 @@
 from .typing import *
-from torch.nn.functional import mse_loss
+import torch.nn.functional as F
+from .early_stopper import EarlyStopper
 
 
 class HyperParams:
+  '''Bundle model training hyper-parameters.'''
+  epochs: int
+  batch_size: int
+  _learn_rate: float
+  optimizer: Optimizer
+  _reg_factor: float
+  stopper: EarlyStopper
+
   def __init__(self,
                epochs: int,
                batch_size: int,
-               lr: float,
-               loss_func: Any,
                optimizer: Optimizer,
-               reg_factor: float = 0.0) -> None:
+               learn_rate: float = None,
+               reg_factor: float = None,
+               stopper: EarlyStopper = None) -> None:
     self.epochs = epochs
     self.batch_size = batch_size
-    self.loss_func = loss_func
-    self.lr = lr
     self.optimizer = optimizer
-    self.reg_factor = reg_factor
+
+    self._learn_rate = learn_rate
+    self._reg_factor = reg_factor
+    self.stopper = stopper
 
   def get_optimizer(self, model_params) -> Optimizer:
-    return self.optimizer(
-        model_params,
-        lr=self.lr,
-        weight_decay=self.reg_factor
-    )
+    if self._learn_rate is None:
+      if self._reg_factor is None:
+        return self.optimizer(model_params)
+      else:  # self._reg_factor is not None:
+        return self.optimizer(model_params, weight_decay=self._reg_factor)
+    else:  # self._learn_rate is not None
+      if self._reg_factor is None:
+        return self.optimizer(model_params, lr=self._learn_rate)
+      else:  # self._reg_factor is not None:
+        return self.optimizer(model_params, lr=self._learn_rate, weight_decay=self._reg_factor)
 
-  # TODO currently supports MSE only
-  def calc_loss(self, pred: Tensor, target: Tensor) -> Tensor:
-    return self.loss_func(pred, target, reduction='mean')
+  def mse_loss(self, pred: Tensor, target: Tensor) -> Tensor:
+    return F.mse_loss(pred, target, reduction='mean')
+
+  @property
+  def has_stopper(self) -> bool:
+    return False if (self.stopper is None) else True

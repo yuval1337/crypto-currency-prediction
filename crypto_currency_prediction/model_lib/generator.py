@@ -1,12 +1,11 @@
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
-from datetime import datetime
 from glob import glob
 
 from .typing import *
 from .dataset import CryptoCompareDataset as Dataset
-from utils import CryptoCompareConnector as Connector
+from utils import CryptoCompareConnector as Connector, timestamp, globber
 
 
 class CryptoCompareDatasetGenerator:
@@ -17,10 +16,8 @@ class CryptoCompareDatasetGenerator:
 
   def __init__(self, symbol: str, to: str, from_file: bool = False):
     if from_file:
-      csv_files = glob(f'{symbol}2{to}_*.csv')
-      if csv_files == []:
-        raise RuntimeError
-      self.read(symbol, to, csv_files[-1])  # use the latest csv
+      # use the most recent local file
+      self.read(symbol, to, globber(f'{symbol}2{to}_*.csv'))
     else:
       self.fetch(symbol, to)  # get fresh data from the api
 
@@ -34,8 +31,7 @@ class CryptoCompareDatasetGenerator:
     df = Connector.data_histoday(symbol, to)
 
     # save the DataFrame to a local csv file
-    timestamp = datetime.now().strftime('%d%m%y%H%M%S')
-    df.to_csv(symbol + '2' + to + '_' + timestamp + '.csv')
+    df.to_csv(symbol + '2' + to + '_' + timestamp() + '.csv')
 
     x, y = self._df_to_x_y(df)
     self.ds = Dataset(symbol, to, x, y)

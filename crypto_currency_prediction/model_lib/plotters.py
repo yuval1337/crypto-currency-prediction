@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from .generator import CryptoCompareDatasetGenerator as Generator
@@ -31,3 +32,11 @@ class CryptoDatasetPlotter:
     plt.ylabel(f'value ({self.gen.ds.to})')
     plt.xlabel(f'close (per-day)')
     plt.show()
+
+
+class TrainingPlotter:
+  train_loss: np.ndarray
+  hp: HyperParams
+
+  def __init__(self):
+    pass

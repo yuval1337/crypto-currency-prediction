@@ -7,66 +7,77 @@ from .model import CryptoPredictorModel as Model
 from .typing import *
 
 
-class EarlyStopper:
-  def __init__(self, patience: int, delta: float):
-    self.patience = patience  # Number of epochs to wait before stopping
-    self.delta = delta  # Minimum improvement required to be considered as an improvement
-    self.best_loss = float('inf')
-    self.counter = 0
+class TrainingSession:
+  '''Bundle a single training session's results.'''
+  model: Model
+  train_set: Dataset
+  hp: HyperParams
+  losses: list[float]
+  early_stop: bool  # whether an early-stop was triggered
 
-  def check_stop(self, current_loss):
-    if current_loss < self.best_loss - self.delta:
-      self.best_loss = current_loss
-      self.counter = 0
-    else:
-      self.counter += 1
-      if self.counter >= self.patience:
-        print('EarlyStopper triggered!')
-        return True  # Stop training
-    return False  # Continue training
+  def __init__(self,
+               model: Model,
+               train_set: Dataset,
+               hp: HyperParams,
+               losses: list[float]) -> None:
+    self.model = model
+    self.train_set = train_set
+    self.hp = hp
+    self.losses = losses
+    self.early_stop = True if len(losses) < hp.epochs else False
 
 
 class Trainer:
-  memory: list[Model]
-  hp: HyperParams
-  train_set: Dataset
-  test_set: Dataset
-  es: EarlyStopper
+  init_model = Model  # initial model before any training were performed
+  # all training sessions performed using this instance
+  memory: list[TrainingSession]
 
-  def __init__(self, model: Model,
-               hp: HyperParams,
-               train_set: Dataset,
-               test_set: Dataset):
-    self.memory = [model]
-    self.hp = hp
-    self.train_set = train_set
-    self.test_set = test_set
-    self.es = EarlyStopper(patience=5, delta=0.001)
+  def __init__(self, model: Model):
+    self.init_model = model
+    self.memory = []
 
-  def train(self, verbose: bool = False) -> None:
-    '''Perform a single training session of this object's latest model, save the trained model'''
+  def train(self,
+            train_set: Dataset,
+            hp: HyperParams = None,
+            verbose: bool = True) -> TrainingSession | None:
+    '''Perform a single training session of this object's most recent model, and save the resulting trained model'''
     if verbose:
       print('training...')
 
-    model = self.model
-    optimizer = self.hp.get_optimizer(model.parameters())
+    model = self.model  # get the most recent model
+    optimizer = hp.get_optimizer(model.parameters())
+    dl = train_set.to_dl(hp.batch_size)
+
+    losses = []
 
     model.train()
-    for epoch in range(self.hp.epochs):
+    for epoch in range(hp.epochs):
       epoch_loss = 0.0
-      for inputs, labels in self.train_dl:
+      for inputs, labels in dl:
         optimizer.zero_grad()
         outputs = model.forward(inputs)
-        loss = self.hp.calc_loss(outputs, labels)
+        loss = hp.mse_loss(outputs, labels)
         loss.backward()
         optimizer.step()
         epoch_loss += (loss.item() / len(inputs))
+      losses.append(epoch_loss)
       if verbose:
         print(f'epoch={epoch + 1}, loss={epoch_loss}')
-      if self.es.check_stop(epoch_loss):  # early stopping mechanism
-        break
 
-    self.memory.append(model)
+      if hp.has_stopper:
+        if hp.stopper(loss=epoch_loss):  # early stopping triggered
+          if verbose:
+            print('early-stop triggered!')
+          break
+
+    session = TrainingSession(
+        model,
+        train_set,
+        hp,
+        losses
+    )
+
+    self.memory.append(session)
 
   def test(self, verbose: bool = True) -> None:
     if verbose:
@@ -82,7 +93,7 @@ class Trainer:
         batch_prediction = model.forward(inputs)
         predictions.append(self.test_set.descale_tensor(
             batch_prediction).flatten())
-        loss = self.hp.calc_loss(batch_prediction, labels)
+        loss = self.hp.mse_loss(batch_prediction, labels)
         test_loss += (loss.item() / len(inputs))
 
     predictions = np.concatenate(predictions)
@@ -95,19 +106,8 @@ class Trainer:
     return None
 
   @property
-  def train_dl(self) -> DataLoader:
-    tds = TensorDataset(self.train_set.x_scaled,
-                        self.train_set.y_scaled.squeeze(2))
-    dl = DataLoader(tds, self.hp.batch_size, shuffle=True)
-    return dl
-
-  @property
-  def test_dl(self) -> DataLoader:
-    tds = TensorDataset(self.test_set.x_scaled,
-                        self.test_set.y_scaled.squeeze(2))
-    dl = DataLoader(tds, self.hp.batch_size, shuffle=False)
-    return dl
-
-  @property
   def model(self) -> Model:
-    return self.memory[-1]
+    if len(self.memory) == 0:
+      return self.init_model
+    else:
+      return self.memory[-1].model

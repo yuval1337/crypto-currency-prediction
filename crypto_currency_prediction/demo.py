@@ -1,3 +1,4 @@
+import torch
 from utils import *
 from model_lib import *
 
@@ -9,23 +10,23 @@ def demo():
       from_file=True
   )
   train_set, test_set = gen.split(0.8)
-  model_obj = Model(
-      in_features=gen.ds.x_size,
-      out_features=gen.ds.y_size,
-      hidden_size=128,
-      num_layers=2
-  )
-  hp_obj = HyperParams(
-      epochs=50,
+  model = Model(gen.ds)
+  hp = HyperParams(
+      epochs=5,
       batch_size=8,
-      loss_func=torch.nn.functional.mse_loss,
       optimizer=torch.optim.Adam,
-      lr=0.0001,
-      reg_factor=0.01
+      learn_rate=0.0001,
+      reg_factor=0.01,
+      stopper=EarlyStopper()
   )
-  trainer_obj = Trainer(model_obj, hp_obj, train_set, test_set)
-  trainer_obj.train(verbose=True)
-  trainer_obj.test()
+  trainer = Trainer(model)
+  trainer.train(train_set, hp)
+  trainer.model.save()
+
+  loaded_model = Model(gen.ds).load()
+
+  new_trainer = Trainer(loaded_model)
+  new_trainer.train(train_set, hp)
 
 
 if __name__ == '__main__':
