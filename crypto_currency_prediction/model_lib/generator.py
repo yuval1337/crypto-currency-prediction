@@ -59,3 +59,17 @@ class CryptoCompareDatasetGenerator:
             for key, val in zip(self.FEATURES, zip(*self.ds.x))}
     df = pd.DataFrame(data)
     return df
+
+  def create_dataset(dataset, lookback):
+    """Transform a time series into a prediction dataset
+
+    Args:
+        dataset: A numpy array of time series, first dimension is the time steps
+        lookback: Size of window for prediction
+    """
+    x, y = [], []
+    for i in range(len(dataset) - lookback):
+      feature = dataset[i:i + lookback]
+      target = dataset[i + 1:i + lookback + 1]
+      x.append(feature)
+      y.append(target)

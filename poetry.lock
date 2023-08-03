@@ -874,6 +874,16 @@ files = [
 ]
 
 [[package]]
+name = "sty"
+version = "1.0.4"
+description = "String styling for your terminal"
+optional = false
+python-versions = "*"
+files = [
+    {file = "sty-1.0.4-py3-none-any.whl", hash = "sha256:3e3352f05770a37e11c9dfc303cbccb1c6acc13710e15d181cb43be7df89f8ea"},
+]
+
+[[package]]
 name = "sympy"
 version = "1.12"
 description = "Computer algebra system (CAS) in Python"
@@ -979,4 +989,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "d4078a637863bde7e06454935804b48a3d94caaafc0611a9e19a4804a7b7cd43"
+content-hash = "5167eac157f01752cf07f5e732e2ecc0996b0a5cfe8d3cf7005224bc48a73d63"

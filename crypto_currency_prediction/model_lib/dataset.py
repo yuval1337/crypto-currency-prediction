@@ -73,7 +73,7 @@ class CryptoCompareDataset:
     arr = tensor.numpy()
     return self.scaler.inverse_transform(arr)
 
-  @staticmethod
+  @ staticmethod
   def np2tensor(x: np.ndarray) -> Tensor:
     if len(x.shape) > 1:
       tensor = torch.from_numpy(x)
