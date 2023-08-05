@@ -11,7 +11,7 @@ class CryptoPredictorModel(torch.nn.Module):
   '''
   in_features: int
   out_features: int
-  HIDDEN_SIZE: int = 128
+  HIDDEN_SIZE: int = 256
   NUM_LAYERS: int = 2
 
   def __init__(self, ds: Dataset) -> None:
@@ -41,14 +41,13 @@ class CryptoPredictorModel(torch.nn.Module):
     return out
 
   def save(self) -> None:
-    '''Saves this model to a local `.pth` file.'''
+    '''Saves this model's state dict to a local `.pth` file.'''
     torch.save(
         obj=self.state_dict(),
         f=f'cpm_{timestamp()}.pth'
     )
 
-  # TODO finish this method
   def load(self) -> None:
     '''Loads this model with values from the most recent local `.pth` file.'''
-    # file = globber(f'cpm_*.pth')
-    pass
+    file = globber(f'cpm_*.pth')
+    self.load_state_dict(torch.load(file))
