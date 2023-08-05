@@ -1,11 +1,11 @@
-from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 from glob import glob
 
-from .typing import *
-from .dataset import CryptoCompareDataset as Dataset
 from utils import CryptoCompareConnector as Connector, timestamp, globber
+from .dataset import CryptoCompareDataset as Dataset
+from .lib_typing import Tuple
 
 
 class CryptoCompareDatasetGenerator:
@@ -42,15 +42,18 @@ class CryptoCompareDatasetGenerator:
     x, y = self._df_to_x_y(df)
     self.ds = Dataset(symbol, to, x, y)
 
-  def split(self, ratio: float) -> Tuple[Dataset, Dataset]:
-    '''Split current (state) dataset into train test datasets, and return them.'''
-    idx = int(len(self.ds.y) * ratio)
+  def split(self, train: int, valid: int, test: int) -> Tuple[Dataset, Dataset, Dataset]:
+    '''Split current dataset into training, validation and testing datasets.'''
+    n = len(self.ds.y)
+    i = int(np.ceil(n * (train / 100)))
+    j = i + int(np.ceil(n * (valid / 100)))
 
-    x_train, x_test = np.split(self.ds.x, [idx])
-    y_train, y_test = np.split(self.ds.y, [idx])
+    x_train, x_valid, x_test = np.split(self.ds.x, [i, j])
+    y_train, y_valid, y_test = np.split(self.ds.y, [i, j])
 
     return (
         Dataset(self.ds.symbol, self.ds.to, x_train, y_train),
+        Dataset(self.ds.symbol, self.ds.to, x_valid, y_valid),
         Dataset(self.ds.symbol, self.ds.to, x_test, y_test)
     )
 

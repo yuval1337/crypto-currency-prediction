@@ -1,34 +1,33 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+# import matplotlib.pyplot as plt
+# import pandas as pd
 
-from .generator import CryptoCompareDatasetGenerator as Generator
-from .typing import *
+# from .generator import CryptoCompareDatasetGenerator as Generator
+# from .lib_typing import *
 
 
-class CryptoDatasetPlotter:
-  gen: Generator
+# class CryptoDatasetPlotter:
+#   gen: Generator
 
-  def __init__(self, gen: Generator):
-    self.gen = gen
+#   def __init__(self, gen: Generator):
+#     self.gen = gen
 
-  def show(self) -> None:
-    df = self.gen.to_df()
-    df.plot(y='close')
-    plt.ylabel(f'value ({self.gen.ds.to})')
-    plt.xlabel(f'close (per-day)')
-    plt.show()
+#   def show(self) -> None:
+#     df = self.gen.to_df()
+#     df.plot(y='close')
+#     plt.ylabel(f'value ({self.gen.ds.to})')
+#     plt.xlabel(f'close (per-day)')
+#     plt.show()
 
-  def show_diff(self, pred: Any) -> None:
-    self_df = self.gen.to_df()
+#   def show_diff(self, pred: Any) -> None:
+#     self_df = self.gen.to_df()
 
-    df = pd.DataFrame({
-        'label': self_df['close'],
-        'pred': pred
-    })
+#     df = pd.DataFrame({
+#         'label': self_df['close'],
+#         'pred': pred
+#     })
 
-    self_df.plot(y=['label', 'pred'], color=['blue', 'red'])
+#     self_df.plot(y=['label', 'pred'], color=['blue', 'red'])
 
-    plt.ylabel(f'value ({self.gen.ds.to})')
-    plt.xlabel(f'close (per-day)')
-    plt.show()
+#     plt.ylabel(f'value ({self.gen.ds.to})')
+#     plt.xlabel(f'close (per-day)')
+#     plt.show()

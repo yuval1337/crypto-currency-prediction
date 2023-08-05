@@ -3,5 +3,14 @@
   "python.formatting.autopep8Args": [
     "--indent-size=2",
     "--ignore=E402"
+  ],
+  "cSpell.ignoreWords": [
+    "Hyperparams",
+    "lookback",
+    "ndarray",
+    "optim"
+  ],
+  "cSpell.words": [
+    "funcs"
   ]
 }

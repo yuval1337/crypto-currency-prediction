@@ -1,18 +1,8 @@
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
+import sklearn.preprocessing as pp
 
-from .typing import *
-
-
-class Feature(np.ndarray):
-  pass
-
-
-class Target(np.ndarray):
-  pass
+from .lib_typing import *
 
 
 class CryptoCompareDataset:
@@ -21,7 +11,7 @@ class CryptoCompareDataset:
   x: np.ndarray  # features
   y: np.ndarray  # targets
   type: Literal['neutral', 'train', 'test']
-  scaler: MinMaxScaler
+  scaler: pp.MinMaxScaler
 
   def __init__(self,
                symbol: str,
@@ -34,7 +24,7 @@ class CryptoCompareDataset:
     self.x = x
     self.y = y
     self.type = type
-    self.scaler = MinMaxScaler()
+    self.scaler = pp.MinMaxScaler()
 
   @property
   def x_size(self) -> int:
@@ -60,7 +50,7 @@ class CryptoCompareDataset:
     tds = TensorDataset(self.x_scaled, self.y_scaled.squeeze(2))
     dl = DataLoader(tds,
                     batch_size,
-                    shuffle=(True if (self.type == 'train') else False))
+                    shuffle=True if self.type == 'train' else False)
     return dl
 
   def scale_x(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -69,11 +59,19 @@ class CryptoCompareDataset:
   def scale_y(self, y: np.ndarray) -> np.ndarray:
     return self.scaler.fit_transform(y.reshape(-1, 1))
 
+  def descale_x(self, x_scaled: Tensor) -> np.ndarray:
+    x_scaled = x_scaled.squeeze(2).numpy()
+    return self.scaler.inverse_transform(x_scaled)
+
+  def descale_y(self, y_scaled: Tensor) -> np.ndarray:
+    y_scaled = y_scaled.numpy()
+    return self.scaler.inverse_transform(y_scaled)
+
   def descale_tensor(self, tensor: Tensor) -> np.ndarray:
     arr = tensor.numpy()
     return self.scaler.inverse_transform(arr)
 
-  @ staticmethod
+  @staticmethod
   def np2tensor(x: np.ndarray) -> Tensor:
     if len(x.shape) > 1:
       tensor = torch.from_numpy(x)

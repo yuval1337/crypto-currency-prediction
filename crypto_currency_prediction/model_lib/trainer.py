@@ -1,39 +1,46 @@
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from .dataset import CryptoCompareDataset as Dataset
 from .model import CryptoPredictorModel as Model
-from .typing import *
+from .hyper_params import Hyperparams
+from .lib_typing import DataLoader, Tensor, Optimizer
+
+import matplotlib.dates as mdates
+from datetime import datetime, timedelta
 
 
 class Trainer:
   class _Session:
-    '''Bundles training session data regarding training and validation.'''
+    '''Bundles single session's data, regarding training and validation.'''
     model: Model
-    train_set: Dataset
-    train_dl: DataLoader
-    valid_set: Dataset
-    valid_dl: DataLoader
-    hp: HyperParams
-    t_loss: list[float]
-    v_loss: list[float]
+    hp: Hyperparams
+    train_ds: Dataset
+    valid_ds: Dataset
+    train_loss: list[float]
+    valid_loss: list[float]
 
     def __init__(self,
                  model: Model,
-                 hp: HyperParams,
-                 train_set: Dataset,
-                 valid_set: Dataset) -> None:
+                 hp: Hyperparams,
+                 train_ds: Dataset,
+                 valid_ds: Dataset) -> None:
       self.model = model
       self.hp = hp
-      self.train_set = train_set
-      self.valid_set = valid_set
-      self.train_dl = train_set.to_dl(hp.batch_size)
-      self.valid_dl = valid_set.to_dl(hp.batch_size)
-      self.t_loss = []
-      self.v_loss = []
+      self.train_ds = train_ds
+      self.valid_ds = valid_ds
+      self.train_loss = []
+      self.valid_loss = []
+
+    def plot(self):
+      df = pd.DataFrame({'Training': self.train_loss,
+                        'Validation': self.valid_loss})
+      df.plot(y=['Training', 'Validation'])
+      plt.ylabel('Loss')
+      plt.xlabel('Epoch')
+      plt.show()
 
   init_model = Model  # initial model before any training were performed
   memory: list[_Session]  # all training sessions performed on this instance
@@ -43,57 +50,93 @@ class Trainer:
     self.memory = []
 
   def run_train_session(self,
-                        train_set: Dataset,
-                        valid_set: Dataset,
-                        hp: HyperParams,
-                        verbose: bool = False) -> None:
+                        train_ds: Dataset,
+                        valid_ds: Dataset,
+                        hp: Hyperparams,
+                        verbose: bool = False,
+                        plot: bool = False) -> None:
     '''Perform a single training session of this object's most recent model, and save the resulting trained model.'''
-    line = '{0:<8}{1:<24}{2:<24}'
 
-    session = self._Session(self.model, hp, train_set, valid_set)
-
-    if verbose:
-      print('training...')
-      print(line.format('epoch', 't_loss', 'v_loss'))
+    session = self._Session(self.model, hp, train_ds, valid_ds)
 
     for epoch in range(session.hp.epochs):
       self._train(session)
       self._validate(session)
+
       if verbose:
-        print(line.format((epoch + 1), session.t_loss[-1], session.v_loss[-1]))
+        line = '{0:<8}{1:<24}{2:<24}'
+        if epoch == 0:
+          print(line.format('epoch', 'training loss', 'validation loss'))
+        print(line.format((epoch + 1),
+              session.train_loss[-1], session.valid_loss[-1]))
 
       if hp.has_stopper:
-        if hp.stopper(loss=session.t_loss[-1]):  # early stopping triggered
+        if hp.stopper(loss=session.train_loss[-1]):  # early stopping triggered
           if verbose:
-            print('early-stop triggered!')
+            print('early stopper triggered!')
           break
 
     self.memory.append(session)
-    if verbose:
-      self.plot(session)
+    if plot:
+      session.plot()
 
   def _train(self, session: _Session) -> None:
-    loss = 0.0
-    optimizer = session.hp.get_optimizer(session.model.parameters())
+    loss_per_batch = []
+    optimizer_obj: Optimizer = session.hp.optimizer(session.model.parameters())
+    dl: DataLoader = session.train_ds.to_dl(session.hp.batch_size)
+
     session.model.train()
-    for inputs, labels in session.train_dl:
-      optimizer.zero_grad()
+    for inputs, labels in dl:
+      optimizer_obj.zero_grad()
       outputs = session.model.forward(inputs)
-      loss_tensor = session.hp.mse_loss(outputs, labels)
-      loss_tensor.backward()
-      optimizer.step()
-      loss += loss_tensor.item()
-    session.t_loss.append(loss / len(session.train_dl))
+      loss: Tensor = session.hp.loss_fn(input=outputs, target=labels)
+      loss.backward()
+      optimizer_obj.step()
+      loss_per_batch.append(loss.item())
+
+    session.train_loss.append(np.mean(loss_per_batch))
 
   def _validate(self, session: _Session) -> float:
-    loss = 0.0
+    loss_per_batch = []
+    dl: DataLoader = session.valid_ds.to_dl(session.hp.batch_size)
+
     session.model.eval()
     with torch.no_grad():
-      for inputs, labels in session.valid_dl:
+      for inputs, labels in dl:
         outputs = session.model.forward(inputs)
-        loss_tensor = session.hp.mse_loss(outputs, labels)
-        loss += loss_tensor.item()
-    session.v_loss.append(loss / len(session.valid_dl))
+        loss: Tensor = session.hp.loss_fn(input=outputs, target=labels)
+        loss_per_batch.append(loss.item())
+
+    session.valid_loss.append(np.mean(loss_per_batch))
+
+  def run_test(self, test_ds: Dataset) -> None:
+    dl = test_ds.to_dl(1)
+
+    self.model.eval()
+    with torch.no_grad():
+      actual_values = []
+      predicted_values = []
+
+      for inputs, labels in dl:
+        predicted_scaled = self.model.predict(inputs)
+        actual_scaled = labels  # Assuming labels are already in the original scale
+
+        predicted = test_ds.descale_y(predicted_scaled)
+        actual = test_ds.descale_y(actual_scaled)
+
+        actual_values.append(actual.item())
+        predicted_values.append(predicted.item())
+
+      plt.figure(figsize=(10, 6))
+      plt.plot(actual_values, label=f'Actual Price')
+      plt.plot(predicted_values, label=f'Predicted Price')
+      plt.xlabel('Day')
+      plt.ylabel(f'Price ({test_ds.to.upper()})')
+      plt.title(f'{test_ds.symbol.upper()} to {test_ds.to.upper()}')
+
+      plt.legend()
+      plt.tight_layout()
+      plt.show()
 
   @property
   def model(self) -> Model:
@@ -101,11 +144,3 @@ class Trainer:
       return self.init_model
     else:
       return self.memory[-1].model
-
-  @staticmethod
-  def plot(session: _Session) -> None:
-    df = pd.DataFrame({'train': session.t_loss, 'valid': session.v_loss})
-    df.plot(y=['train', 'valid'])
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch #')
-    plt.show()

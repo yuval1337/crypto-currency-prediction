@@ -1,4 +1,4 @@
-from .typing import *
+from .lib_typing import *
 
 
 class EarlyStopper:
@@ -8,13 +8,13 @@ class EarlyStopper:
   best_loss: float
   counter: int
 
-  def __init__(self, tolerance: Literal['low', 'med', 'high'] = 'low'):
+  def __init__(self, tolerance: Literal['low', 'med', 'high']):
     if tolerance == 'low':
-      self.patience, self.delta = (3, 0.1)
+      self.patience, self.delta = 8, 0.0100
     elif tolerance == 'med':
-      self.patience, self.delta = (5, 0.01)
+      self.patience, self.delta = 16, 0.0050
     else:  # tolerance == 'high'
-      self.patience, self.delta = (10, 0.001)
+      self.patience, self.delta = 24, 0.0025
     self.best_loss = float('inf')
     self.counter = 0
 

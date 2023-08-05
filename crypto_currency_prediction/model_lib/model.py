@@ -1,11 +1,11 @@
 import torch
-import torch.nn as nn
 
 from utils import timestamp, globber
-from .typing import *
+from .lib_typing import Tensor
+from .dataset import CryptoCompareDataset as Dataset
 
 
-class CryptoPredictorModel(nn.Module):
+class CryptoPredictorModel(torch.nn.Module):
   '''Simple, hybrid deep-learning model for predicting time-series.  
   Source: https://machinelearningmastery.com/lstm-for-time-series-prediction-in-pytorch/
   '''
@@ -19,12 +19,12 @@ class CryptoPredictorModel(nn.Module):
     self.in_features = ds.x_size
     self.out_features = ds.y_size
     # https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
-    self.lstm = nn.LSTM(self.in_features,
-                        self.HIDDEN_SIZE,
-                        self.NUM_LAYERS,
-                        batch_first=True)
-    self.linear = nn.Linear(in_features=self.HIDDEN_SIZE,
-                            out_features=self.out_features)
+    self.lstm = torch.nn.LSTM(self.in_features,
+                              self.HIDDEN_SIZE,
+                              self.NUM_LAYERS,
+                              batch_first=True)
+    self.linear = torch.nn.Linear(in_features=self.HIDDEN_SIZE,
+                                  out_features=self.out_features)
 
   def forward(self, x: Tensor) -> Tensor:
     h0 = torch.zeros(self.NUM_LAYERS, x.size(0), self.HIDDEN_SIZE).to(x.device)
@@ -32,6 +32,12 @@ class CryptoPredictorModel(nn.Module):
     out, _ = self.lstm(x, (h0, c0))
     out = out[:, -1, :]  # Get the last output from LSTM sequence
     out = self.linear(out)
+    return out
+
+  def predict(self, x: Tensor) -> Tensor:
+    self.eval()
+    with torch.no_grad():
+      out = self.forward(x)
     return out
 
   def save(self) -> None:
