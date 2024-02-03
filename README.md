@@ -11,7 +11,7 @@ Data is fetched from public API for crypto-currency time-series.
 ## Prerequisites
 - [Python3](https://www.python.org/)
 - [PyTorch](https://pytorch.org/)
-- [SciKitLearn](https://scikit-learn.org)
+- [scikit-learn](https://scikit-learn.org)
 - [Poetry](https://python-poetry.org/)
 
 ## Legal
