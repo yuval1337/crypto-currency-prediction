@@ -14,6 +14,6 @@ Data is fetched from public API for crypto-currency time-series.
 - [SciKitLearn](https://scikit-learn.org)
 - [Poetry](https://python-poetry.org/)
 
-## License
-Licensed under the [GPLv3](./LICENSE).
+## Legal
+Licensed under the GPLv3.  
 Copyright (c) 2024 @yuval1337. All rights reserved.
