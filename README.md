@@ -15,5 +15,6 @@ Data is fetched from public API for crypto-currency time-series.
 - [Poetry](https://python-poetry.org/)
 
 ## Legal
-Licensed under the GPLv3.  
-Copyright (c) 2024 @yuval1337. All rights reserved.
+Licensed under [GPLv3](./LICENSE).
+
+Copyright (C) 2024 yuval1337. All rights reserved.
